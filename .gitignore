@@ -1,0 +1,33 @@
+# Node modules (no subirlos al repo)
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Directorios de sistema
+.DS_Store
+
+# Entornos locales o archivos de configuración sensibles
+.env
+.env.local
+.env.*.local
+
+# Dependencias empaquetadas
+package-lock.json
+
+# Editor
+.vscode/
+.idea/
+
+# PM2
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Misc
+*.tgz
