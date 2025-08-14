@@ -62,28 +62,12 @@ app.get('/', (req, res) => {
     };
 
     // Emitir a todos en el chat
-      io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', contenido);
+      io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
     console.log(`📤 Mensaje enviado en chat:${chatId} al usuario:${id_destinatario}`);
   });
 
-   // Evento para enviar mensaje
-  socket.on('changes_in_events', ({ id_destinatario, contenido }) => {
-    const mensaje = {
-      id_mensaje: Date.now(),
-      chatId,
-      contenido,
-      timestamp: new Date(),
-    };
 
-    // Emitir a todos en el chat
-      io.to(`user:${id_destinatario}`).emit('cambios_eventos', contenido);
-    console.log(`📤 Cambios en eventos  en chat:${chatId} al usuario:${id_destinatario}`);
-  });
-
-
-
-
-
+  
   
   // HTTP endpoint para emitir cambios_eventos
 app.post('/emitir-cambios-eventos', (req, res) => {
@@ -93,23 +77,23 @@ app.post('/emitir-cambios-eventos', (req, res) => {
     return res.status(400).json({ error: 'Faltan parámetros' });
   }
 
-  io.to(`user:${id_destinatario}`).emit('changes_in_events', nuevoMensaje);
+  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
   return res.json({ status: 'ok', message: 'Evento cambios_eventos emitido' });
 });
 
 
 
-// // HTTP endpoint para emitir cambio_publicidad
-// app.post('/emitir-cambio-publicidad', (req, res) => {
-//   const { id_destinatario , nuevoMensaje } = req.body;
+// HTTP endpoint para emitir cambio_publicidad
+app.post('/emitir-cambio-publicidad', (req, res) => {
+  const { id_destinatario , nuevoMensaje } = req.body;
 
-//   if (!id_destinatario || !nuevoMensaje) {
-//     return res.status(400).json({ error: 'Faltan parámetros' });
-//   }
+  if (!id_destinatario || !nuevoMensaje) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
 
-//   io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
-//   return res.json({ status: 'ok', message: 'Evento cambio_publicidad emitido' });
-// });
+  io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
+  return res.json({ status: 'ok', message: 'Evento cambio_publicidad emitido' });
+});
 
 // Ruta para enviar mensajes
 app.post('/mensajes', (req, res) => {
