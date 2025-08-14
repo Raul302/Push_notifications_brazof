@@ -44,6 +44,10 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`🔴 Usuario desconectado: ${socket.id}`);
   });
+
+  socket.on('messages', () => {
+    console.log('messages ');
+  })
 });
 
 
@@ -52,6 +56,19 @@ io.on('connection', (socket) => {
 app.get('/', (req, res) => {
   res.send('Servidor WebSocket funcionando ✔️');
 });
+
+  // HTTP endpoint para emitir cambios_eventos
+app.post('/emitir-cambios-eventos', (req, res) => {
+  const { id_destinatario , nuevoMensaje } = req.body;
+
+  if (!id_destinatario || !nuevoMensaje) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+
+  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
+  return res.json({ status: 'ok', message: 'Evento cambios_eventos emitido' });
+});
+
 
   // HTTP endpoint para emitir cambios_eventos
 app.post('/emitir-cambios-eventos', (req, res) => {
@@ -104,7 +121,6 @@ app.post('/mensajes', (req, res) => {
     // Emitir al usuario destinatario aunque no esté en ese chat activo
   io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
 
-  io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
 
 
   console.log(`📤 Mensaje enviado de ${id_remitente} a ${id_destinatario} en chat:${chat_id}`);
