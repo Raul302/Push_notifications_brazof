@@ -51,19 +51,6 @@ app.get('/', (req, res) => {
   res.send('Servidor WebSocket funcionando ✔️');
 });
 
-// Ruta para enviar mensajes
-app.post('/mensajes', (req, res) => {
-  const { id_remitente, id_destinatario, chat_id, contenido } = req.body;
-
-  const nuevoMensaje = {
-    id_mensaje: Date.now(),
-    id_remitente,
-    id_destinatario,
-    chat_id,
-    contenido,
-    timestamp: new Date()
-  };
-
   // HTTP endpoint para emitir cambios_eventos
 app.post('/emitir-cambios-eventos', (req, res) => {
   const { id_destinatario } = req.body;
@@ -89,6 +76,21 @@ app.post('/emitir-cambio-publicidad', (req, res) => {
   io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
   return res.json({ status: 'ok', message: 'Evento cambio_publicidad emitido' });
 });
+
+// Ruta para enviar mensajes
+app.post('/mensajes', (req, res) => {
+  const { id_remitente, id_destinatario, chat_id, contenido } = req.body;
+
+  const nuevoMensaje = {
+    id_mensaje: Date.now(),
+    id_remitente,
+    id_destinatario,
+    chat_id,
+    contenido,
+    timestamp: new Date()
+  };
+
+
 
 
   // Emitir a la sala del chat
