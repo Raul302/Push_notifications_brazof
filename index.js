@@ -53,7 +53,7 @@ app.get('/', (req, res) => {
 
   // HTTP endpoint para emitir cambios_eventos
 app.post('/emitir-cambios-eventos', (req, res) => {
-  const { id_destinatario } = req.body;
+  const { id_destinatario , nuevoMensaje } = req.body;
 
   if (!id_destinatario || !nuevoMensaje) {
     return res.status(400).json({ error: 'Faltan parámetros' });
@@ -67,7 +67,7 @@ app.post('/emitir-cambios-eventos', (req, res) => {
 
 // HTTP endpoint para emitir cambio_publicidad
 app.post('/emitir-cambio-publicidad', (req, res) => {
-  const { id_destinatario } = req.body;
+  const { id_destinatario , nuevoMensaje } = req.body;
 
   if (!id_destinatario || !nuevoMensaje) {
     return res.status(400).json({ error: 'Faltan parámetros' });
