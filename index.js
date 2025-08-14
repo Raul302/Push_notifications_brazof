@@ -47,9 +47,6 @@ io.on('connection', (socket) => {
 });
 
 
-  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
-  // Emitir al usuario destinatario aunque no esté en ese chat activo
-  io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
