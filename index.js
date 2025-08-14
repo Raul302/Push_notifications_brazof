@@ -51,24 +51,6 @@ app.get('/', (req, res) => {
   res.send('Servidor WebSocket funcionando ✔️');
 });
 
-
- // Evento para enviar mensaje
-  socket.on('send_message', ({ chatId, id_destinatario, contenido }) => {
-    const mensaje = {
-      id_mensaje: Date.now(),
-      chatId,
-      contenido,
-      timestamp: new Date(),
-    };
-
-    // Emitir a todos en el chat
-      io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
-    console.log(`📤 Mensaje enviado en chat:${chatId} al usuario:${id_destinatario}`);
-  });
-
-
-  
-  
   // HTTP endpoint para emitir cambios_eventos
 app.post('/emitir-cambios-eventos', (req, res) => {
   const { id_destinatario , nuevoMensaje } = req.body;
@@ -109,15 +91,7 @@ app.post('/mensajes', (req, res) => {
   };
 
 
-// Evento para emitir solo "cambios_eventos"
-socket.on('emitir_cambios_eventos', ({ id_destinatario, nuevoMensaje }) => {
-  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
-});
 
-// Evento para emitir solo "cambio_publicidad"
-socket.on('emitir_cambio_publicidad', ({ id_destinatario, nuevoMensaje }) => {
-  io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
-});
 
   // Emitir a la sala del chat
   io.to(`chat:${chat_id}`).emit(`chat:${chat_id}`, nuevoMensaje);
