@@ -64,11 +64,44 @@ app.post('/mensajes', (req, res) => {
     timestamp: new Date()
   };
 
+  // HTTP endpoint para emitir cambios_eventos
+app.post('/emitir-cambios-eventos', (req, res) => {
+  const { id_destinatario } = req.body;
+
+  if (!id_destinatario || !nuevoMensaje) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+
+  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
+  return res.json({ status: 'ok', message: 'Evento cambios_eventos emitido' });
+});
+
+
+
+// HTTP endpoint para emitir cambio_publicidad
+app.post('/emitir-cambio-publicidad', (req, res) => {
+  const { id_destinatario } = req.body;
+
+  if (!id_destinatario || !nuevoMensaje) {
+    return res.status(400).json({ error: 'Faltan parámetros' });
+  }
+
+  io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
+  return res.json({ status: 'ok', message: 'Evento cambio_publicidad emitido' });
+});
+
+
   // Emitir a la sala del chat
   io.to(`chat:${chat_id}`).emit(`chat:${chat_id}`, nuevoMensaje);
 
   // Emitir al usuario destinatario aunque no esté en ese chat activo
   io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
+
+    // Emitir al usuario destinatario aunque no esté en ese chat activo
+  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
+
+  io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
+
 
   console.log(`📤 Mensaje enviado de ${id_remitente} a ${id_destinatario} en chat:${chat_id}`);
 
