@@ -17,8 +17,34 @@ const io = new Server(server, {
   },
 });
 
-// Guardamos la instancia de io en la app para usarla en rutas
+// Guardamos la instancia de io en la app
 app.set('io', io);
+
+/**
+ * ==========================
+ * Funciones de emisión
+ * ==========================
+ */
+const emitChangesEvents = (userId, message) => {
+  io.to(`user:${userId}`).emit('cambios_eventos', message);
+};
+
+const emitChangeAds = (userId, message) => {
+  io.to(`user:${userId}`).emit('cambio_publicidad', message);
+};
+
+const emitNewMessage = (userId, message) => {
+  io.to(`user:${userId}`).emit('new_message', message);
+};
+
+
+/**
+ * ==========================
+ * Socket.IO
+ * ==========================
+ */
+
+const onlineUsers = new Map(); // key: userId, value: socket.id
 
 io.on('connection', (socket) => {
   console.log(`🟢 Usuario conectado: ${socket.id}`);
@@ -27,6 +53,8 @@ io.on('connection', (socket) => {
   socket.on('register_user', (userId) => {
     socket.join(`user:${userId}`);
     console.log(`✅ Usuario ${userId} se unió a sala user:${userId}`);
+    onlineUsers.set(userId, socket.id);
+    console.log(`✅ Usuario ${userId} está en línea`);
   });
 
   // Unirse a una sala de chat
@@ -35,96 +63,65 @@ io.on('connection', (socket) => {
     console.log(`👥 Se unió a chat:${chatId}`);
   });
 
-  // Salir de una sala de chat (opcional)
+  // Salir de una sala de chat
   socket.on('leave_chat', (chatId) => {
     socket.leave(`chat:${chatId}`);
     console.log(`👤 Salió de chat:${chatId}`);
   });
 
   socket.on('disconnect', () => {
-    console.log(`🔴 Usuario desconectado: ${socket.id}`);
-  });
 
-  socket.on('messages', () => {
-    console.log('messages ');
-  })
+     // remover usuario del mapa de usuarios en línea
+    for (let [userId, id] of onlineUsers) {
+      if (id === socket.id) {
+        onlineUsers.delete(userId);
+        console.log(`🔴 Usuario desconectado: ${userId}`);
+      }
+    }
+  });
 });
 
-
-
-// Ruta de prueba
+/**
+ * ==========================
+ * Rutas HTTP
+ * ==========================
+ */
 app.get('/', (req, res) => {
   res.send('Servidor WebSocket funcionando ✔️');
 });
 
-  // HTTP endpoint para emitir cambios_eventos
 app.post('/emitir-cambios-eventos', (req, res) => {
-  const { id_destinatario , nuevoMensaje } = req.body;
-
-  if (!id_destinatario || !nuevoMensaje) {
+  const { id_destinatario, nuevoMensaje } = req.body;
+  if (!id_destinatario || !nuevoMensaje)
     return res.status(400).json({ error: 'Faltan parámetros' });
-  }
 
-  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
+  emitChangesEvents(id_destinatario, nuevoMensaje);
   return res.json({ status: 'ok', message: 'Evento cambios_eventos emitido' });
 });
 
-
-  // HTTP endpoint para emitir cambios_eventos
-app.post('/emitir-cambios-eventos', (req, res) => {
-  const { id_destinatario , nuevoMensaje } = req.body;
-
-  if (!id_destinatario || !nuevoMensaje) {
-    return res.status(400).json({ error: 'Faltan parámetros' });
-  }
-
-  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
-  return res.json({ status: 'ok', message: 'Evento cambios_eventos emitido' });
-});
-
-
-
-// HTTP endpoint para emitir cambio_publicidad
 app.post('/emitir-cambio-publicidad', (req, res) => {
-  const { id_destinatario , nuevoMensaje } = req.body;
-
-  if (!id_destinatario || !nuevoMensaje) {
+  const { id_destinatario, nuevoMensaje } = req.body;
+  if (!id_destinatario || !nuevoMensaje)
     return res.status(400).json({ error: 'Faltan parámetros' });
-  }
 
-  io.to(`user:${id_destinatario}`).emit('cambio_publicidad', nuevoMensaje);
+  emitChangeAds(id_destinatario, nuevoMensaje);
   return res.json({ status: 'ok', message: 'Evento cambio_publicidad emitido' });
 });
 
-// Ruta para enviar mensajes
 app.post('/mensajes', (req, res) => {
   const { id_remitente, id_destinatario, chat_id, contenido } = req.body;
-
   const nuevoMensaje = {
     id_mensaje: Date.now(),
     id_remitente,
     id_destinatario,
     chat_id,
     contenido,
-    timestamp: new Date()
+    timestamp: new Date(),
   };
 
-
-
-
-  // Emitir a la sala del chat
-  io.to(`chat:${chat_id}`).emit(`chat:${chat_id}`, nuevoMensaje);
-
-  // Emitir al usuario destinatario aunque no esté en ese chat activo
-  io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
-
-    // Emitir al usuario destinatario aunque no esté en ese chat activo
-  io.to(`user:${id_destinatario}`).emit('cambios_eventos', nuevoMensaje);
-
-
+  emitNewMessage(id_destinatario, nuevoMensaje);
 
   console.log(`📤 Mensaje enviado de ${id_remitente} a ${id_destinatario} en chat:${chat_id}`);
-
   return res.status(200).json({ success: true, data: nuevoMensaje });
 });
 
