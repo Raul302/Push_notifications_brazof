@@ -98,8 +98,8 @@ io.on('connection', (socket) => {
   socket.on('register_user', (userId , expoPushToken) => {
     socket.join(`user:${userId}`);
     onlineUsers.set(userId, socket.id);
-    console.log(`✅ Usuario ${userId} está en línea con expo Push token = ${expoPushToken }` );
-  }); ,
+    console.log(`✅ Usuario ${userId} está en línea con expo Push token = ${expoPushToken}` );
+  }); 
 
   socket.on('disconnect', () => {
     for (let [userId, id] of onlineUsers) {
