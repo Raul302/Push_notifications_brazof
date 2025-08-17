@@ -95,10 +95,22 @@ const onlineUsers = new Map();
 io.on('connection', (socket) => {
   console.log(`🟢 Usuario conectado: ${socket.id}`);
 
-  socket.on('register_user', (userId , expoPushToken) => {
+  socket.on('register_user', async (userId , expoPushToken) => {
     socket.join(`user:${userId}`);
     onlineUsers.set(userId, socket.id);
+    
     console.log(`✅ Usuario ${userId} está en línea con expo Push token = ${expoPushToken}` );
+
+     // Guardar el token directamente en la base de datos
+    if (expoPushToken) {
+      try {
+        await saveToken(userId, expoPushToken);
+        console.log(`💾 Token guardado en DB para usuario ${userId}`);
+      } catch (err) {
+        console.error(`❌ Error guardando token para ${userId}:`, err.message);
+      }
+    }
+
   }); 
 
   socket.on('disconnect', () => {
