@@ -113,8 +113,8 @@ io.on("connection", (socket) => {
       timestamp: new Date(),
     };
 
-    emitNewMessage(toUserId, nuevoMensaje);
-
+  io.to(`user:${toUserId}`).emit("escuchando_mensajes", nuevoMensaje);
+  
     if (callback) callback({ status: "ok", enviado: true });
   });
 
