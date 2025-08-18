@@ -3,6 +3,7 @@ const http = require("http");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const sqlite3 = require("sqlite3").verbose();
+const fetch = require('node-fetch'); // npm install node-fetch@2
 
 // ==========================
 // Inicialización Express
@@ -59,6 +60,7 @@ const getToken = (userId) => {
   });
 };
 
+
 // ==========================
 // Servidor HTTP + Socket.IO
 // ==========================
@@ -101,8 +103,42 @@ io.on("connection", (socket) => {
     }
   });
 
+
+
+  // Función para enviar notificación push usando Expo
+const sendPushNotification = async (expoPushToken, message) => {
+  try {
+    const payload = [
+      {
+        to: expoPushToken,
+        sound: 'default',
+        title: 'Nuevo mensaje',
+        body: message,
+        data: { message },
+      },
+    ];
+
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+    console.log('🔔 Push notification result:', result);
+  } catch (err) {
+    console.error('❌ Error enviando push notification:', err.message);
+  }
+};
+
+
+
   // Enviar mensaje a usuario específico
-  socket.on('enviar_mensaje', ({ id_remitente, id_destinatario, contenido }) => {
+  socket.on('enviar_mensaje', async({ id_remitente, id_destinatario, contenido }) => {
   const nuevoMensaje = {
     id_mensaje: Date.now(),
     id_remitente,
@@ -111,8 +147,30 @@ io.on("connection", (socket) => {
     timestamp: new Date(),
   };
 
+  // Si el usuario esta en linea , notificar por websocket , de lo contrario via PUSH NOTIFICATIONS
+
+    const estaEnLinea = onlineUsers.has(id_destinatario);
+    
+     if (estaEnLinea) {
+    // Usuario online → WebSocket
+    io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
+    console.log(`📤 Mensaje en tiempo real a: ${id_destinatario}`);
+  } else {
+    // Usuario offline → enviar push
+    try {
+      const tokenRow = await getToken(id_destinatario);
+      if (tokenRow) {
+        console.log(`🔔 Usuario offline, enviando push a: ${id_destinatario}`);
+        await sendPushNotification(tokenRow.token, contenido);
+      } else {
+        console.log(`⚠️ Usuario offline y sin token: ${id_destinatario}`);
+      }
+    } catch (err) {
+      console.error('❌ Error al enviar push al usuario offline:', err.message);
+    }
+  }
+
   // ✅ Solo el destinatario lo recibe
-  io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
 });
 
   // Desconexión
