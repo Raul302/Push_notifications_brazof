@@ -74,7 +74,7 @@ const onlineUsers = new Map();
 // Funciones de emisión
 // ==========================
 const emitNewMessage = (userId, message) => {
-  io.to(`user:${userId}`).emit("escuchando_mensajes", message);
+  io.to(`user:${userId}`).emit("nuevo_mensaje", message);
 };
 
 // ==========================
@@ -102,21 +102,18 @@ io.on("connection", (socket) => {
   });
 
   // Enviar mensaje a usuario específico
-  socket.on("enviar_mensaje", ({ toUserId, fromUserId, mensaje }, callback) => {
-    console.log(`📩 Mensaje recibido de ${fromUserId} → ${toUserId}: ${mensaje}`);
+  socket.on('enviar_mensaje', ({ id_remitente, id_destinatario, contenido }) => {
+  const nuevoMensaje = {
+    id_mensaje: Date.now(),
+    id_remitente,
+    id_destinatario,
+    contenido,
+    timestamp: new Date(),
+  };
 
-    const nuevoMensaje = {
-      id: Date.now(),
-      fromUserId,
-      toUserId,
-      mensaje,
-      timestamp: new Date(),
-    };
-
-  io.to(`user:${toUserId}`).emit("escuchando_mensajes", nuevoMensaje);
-  
-    if (callback) callback({ status: "ok", enviado: true });
-  });
+  // ✅ Solo el destinatario lo recibe
+  io.to(`user:${id_destinatario}`).emit('nuevo_mensaje', nuevoMensaje);
+});
 
   // Desconexión
   socket.on("disconnect", () => {
@@ -164,7 +161,7 @@ app.get("/get-token/:user_id", async (req, res) => {
 });
 
 // Enviar mensaje vía HTTP (Postman)
-app.post("/mensajes", (req, res) => {
+app.post("/test_sockets", (req, res) => {
   const { id_remitente, id_destinatario, contenido } = req.body;
   if (!id_remitente || !id_destinatario || !contenido) {
     return res.status(400).json({ error: "Faltan parámetros" });
