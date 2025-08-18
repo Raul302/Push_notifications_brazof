@@ -82,7 +82,7 @@ const emitChangeAds = (userId, message) => {
 };
 
 const emitNewMessage = (userId, message) => {
-  io.to(`user:${userId}`).emit('new_message', message);
+  io.to(`user:${userId}`).emit('escuchando_mensajes', message);
 };
 
 /**
@@ -112,6 +112,16 @@ io.on('connection', (socket) => {
     }
 
   }); 
+
+
+  // Enviar mensaje a un usuario específico
+  socket.on('enviar_mensaje', ({ id_destinatario, message }) => {
+    const targetSocket = onlineUsers.get(id_destinatario);
+    if (targetSocket) {
+      emitNewMessage(id_destinatario,message)
+      console.log(`📤 Mensaje enviado a ${id_destinatario}:`, message);
+    }
+  });
 
   socket.on('disconnect', () => {
     for (let [userId, id] of onlineUsers) {
