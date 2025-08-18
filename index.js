@@ -112,9 +112,13 @@ const sendPushNotification = async (expoPushToken, message) => {
       {
         to: expoPushToken,
         sound: 'default',
-        title: 'Nuevo mensaje',
+        title: 'has recibido un nuevo mensaje',
         body: message,
         data: { message },
+        android: {
+          icon: '/assets/logowithouthbrackground.png',
+        color: '#1FFF62',  // verde, por ejemplo
+      },
       },
     ];
 
@@ -187,6 +191,38 @@ const sendPushNotification = async (expoPushToken, message) => {
 // ==========================
 // Rutas HTTP para pruebas
 // ==========================
+
+
+  // HTTP endpoint para emitir cambios_eventos
+app.post('/emitir-cambios-eventos', async (req, res) => {
+  const { id_destinatario } = req.body;
+
+   const estaEnLinea = onlineUsers.has(id_destinatario);
+
+   const mensaje = ' Ha habido cambios en tu evento ';
+    
+     if (estaEnLinea) {
+    // Usuario online → WebSocket
+  io.to(`user:${id_destinatario}`).emit('cambios_eventos', mensaje);
+    console.log(`📤 Mensaje en tiempo real a: ${id_destinatario}`);
+  } else {
+    // Usuario offline → enviar push
+    try {
+      const tokenRow = await getToken(id_destinatario);
+      if (tokenRow) {
+        console.log(`🔔 Usuario offline, enviando push a: ${id_destinatario}`);
+        await sendPushNotification(tokenRow.token, mensaje);
+      } else {
+        console.log(`⚠️ Usuario offline y sin token: ${id_destinatario}`);
+      }
+    } catch (err) {
+      console.error('❌ Error al enviar push al usuario offline:', err.message);
+    }
+  }
+
+  return res.json({ status: 'ok', message: 'Evento cambios_eventos emitido' });
+});
+
 
 // Guardar token manualmente
 app.post("/save-token", async (req, res) => {
