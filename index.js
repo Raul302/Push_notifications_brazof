@@ -1,9 +1,12 @@
-const express = require('express');
-const http = require('http');
-const cors = require('cors');
-const { Server } = require('socket.io');
-const sqlite3 = require('sqlite3').verbose();
+const express = require("express");
+const http = require("http");
+const cors = require("cors");
+const { Server } = require("socket.io");
+const sqlite3 = require("sqlite3").verbose();
 
+// ==========================
+// Inicialización Express
+// ==========================
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -11,7 +14,7 @@ app.use(express.json());
 // ==========================
 // Conexión SQLite
 // ==========================
-const db = new sqlite3.Database('./tokens.db', (err) => {
+const db = new sqlite3.Database("./tokens.db", (err) => {
   if (err) {
     console.error("❌ Error conectando a SQLite:", err.message);
   } else {
@@ -29,7 +32,7 @@ db.run(`
   )
 `);
 
-// Funciones para guardar/consultar
+// Guardar token
 const saveToken = (userId, token) => {
   return new Promise((resolve, reject) => {
     db.run(
@@ -46,6 +49,7 @@ const saveToken = (userId, token) => {
   });
 };
 
+// Obtener token
 const getToken = (userId) => {
   return new Promise((resolve, reject) => {
     db.get(`SELECT token FROM tokens WHERE user_id = ?`, [userId], (err, row) => {
@@ -56,52 +60,37 @@ const getToken = (userId) => {
 };
 
 // ==========================
-// Servidor HTTP
+// Servidor HTTP + Socket.IO
 // ==========================
 const server = http.createServer(app);
-
-// Socket.IO
 const io = new Server(server, {
-  cors: { origin: '*' },
+  cors: { origin: "*" },
 });
 
-// Guardamos la instancia de io en la app
-app.set('io', io);
-
-/**
- * ==========================
- * Funciones de emisión
- * ==========================
- */
-const emitChangesEvents = (userId, message) => {
-  io.to(`user:${userId}`).emit('cambios_eventos', message);
-};
-
-const emitChangeAds = (userId, message) => {
-  io.to(`user:${userId}`).emit('cambio_publicidad', message);
-};
-
-const emitNewMessage = (userId, message) => {
-  io.to(`user:${userId}`).emit('escuchando_mensajes', message);
-};
-
-/**
- * ==========================
- * Socket.IO
- * ==========================
- */
+// Usuarios en línea
 const onlineUsers = new Map();
 
-io.on('connection', (socket) => {
+// ==========================
+// Funciones de emisión
+// ==========================
+const emitNewMessage = (userId, message) => {
+  io.to(`user:${userId}`).emit("escuchando_mensajes", message);
+};
+
+// ==========================
+// WebSockets
+// ==========================
+io.on("connection", (socket) => {
   console.log(`🟢 Usuario conectado: ${socket.id}`);
 
-  socket.on('register_user', async (userId , expoPushToken) => {
+  // Registrar usuario + token
+  socket.on("register_user", async ({ userId, expoPushToken }) => {
     socket.join(`user:${userId}`);
     onlineUsers.set(userId, socket.id);
-    
-    console.log(`✅ Usuario ${userId} está en línea con expo Push token = ${expoPushToken}` );
 
-     // Guardar el token directamente en la base de datos
+    console.log(`✅ Usuario ${userId} registrado con socket ${socket.id}`);
+
+    // Guardar token en DB
     if (expoPushToken) {
       try {
         await saveToken(userId, expoPushToken);
@@ -110,32 +99,27 @@ io.on('connection', (socket) => {
         console.error(`❌ Error guardando token para ${userId}:`, err.message);
       }
     }
+  });
 
-  }); 
+  // Enviar mensaje a usuario específico
+  socket.on("enviar_mensaje", ({ toUserId, fromUserId, mensaje }, callback) => {
+    console.log(`📩 Mensaje recibido de ${fromUserId} → ${toUserId}: ${mensaje}`);
 
+    const nuevoMensaje = {
+      id: Date.now(),
+      fromUserId,
+      toUserId,
+      mensaje,
+      timestamp: new Date(),
+    };
 
-  // Servidor
-        socket.on("enviar_mensaje", (data, callback) => {
-          console.log("📩 Mensaje recibido:", data);
-          // callback({ status: "ok", recibido: true });
-        });
+    emitNewMessage(toUserId, nuevoMensaje);
 
-        // Cliente
-        socket.emit("enviar_mensaje", { toUserId: "123", mensaje: "Hola" }, (res) => {
-          console.log("📤 Confirmación del server:", res);
-        });
+    if (callback) callback({ status: "ok", enviado: true });
+  });
 
-
-  // // Enviar mensaje a un usuario específico
-  // socket.on('enviar_mensaje', ({ id_destinatario, message }) => {
-  //   const targetSocket = onlineUsers.get(id_destinatario);
-  //   if (targetSocket) {
-  //     emitNewMessage(id_destinatario,message)
-  //     console.log(`📤 Mensaje enviado a ${id_destinatario}:`, message);
-  //   }
-  // });
-
-  socket.on('disconnect', () => {
+  // Desconexión
+  socket.on("disconnect", () => {
     for (let [userId, id] of onlineUsers) {
       if (id === socket.id) {
         onlineUsers.delete(userId);
@@ -145,20 +129,15 @@ io.on('connection', (socket) => {
   });
 });
 
-/**
- * ==========================
- * Rutas HTTP
- * ==========================
- */
-app.get('/', (req, res) => {
-  res.send('Servidor WebSocket funcionando ✔️');
-});
+// ==========================
+// Rutas HTTP para pruebas
+// ==========================
 
-// Guardar token
-app.post('/save-token', async (req, res) => {
+// Guardar token manualmente
+app.post("/save-token", async (req, res) => {
   const { user_id, token } = req.body;
   if (!user_id || !token) {
-    return res.status(400).json({ error: 'Faltan parámetros' });
+    return res.status(400).json({ error: "Faltan parámetros" });
   }
 
   try {
@@ -167,42 +146,47 @@ app.post('/save-token', async (req, res) => {
     return res.json({ success: true });
   } catch (err) {
     console.error("❌ Error guardando token:", err.message);
-    return res.status(500).json({ error: 'Error guardando token' });
+    return res.status(500).json({ error: "Error guardando token" });
   }
 });
 
 // Consultar token
-app.get('/get-token/:user_id', async (req, res) => {
+app.get("/get-token/:user_id", async (req, res) => {
   const { user_id } = req.params;
   try {
     const result = await getToken(user_id);
-    if (!result) return res.status(404).json({ error: 'Token no encontrado' });
+    if (!result) return res.status(404).json({ error: "Token no encontrado" });
     return res.json({ user_id, token: result.token });
   } catch (err) {
     console.error("❌ Error obteniendo token:", err.message);
-    return res.status(500).json({ error: 'Error al consultar token' });
+    return res.status(500).json({ error: "Error al consultar token" });
   }
 });
 
-// Emitir evento ejemplo
-app.post('/mensajes', (req, res) => {
-  const { id_remitente, id_destinatario, chat_id, contenido } = req.body;
+// Enviar mensaje vía HTTP (Postman)
+app.post("/mensajes", (req, res) => {
+  const { id_remitente, id_destinatario, contenido } = req.body;
+  if (!id_remitente || !id_destinatario || !contenido) {
+    return res.status(400).json({ error: "Faltan parámetros" });
+  }
+
   const nuevoMensaje = {
-    id_mensaje: Date.now(),
+    id: Date.now(),
     id_remitente,
     id_destinatario,
-    chat_id,
     contenido,
     timestamp: new Date(),
   };
 
   emitNewMessage(id_destinatario, nuevoMensaje);
 
-  console.log(`📤 Mensaje enviado de ${id_remitente} a ${id_destinatario} en chat:${chat_id}`);
+  console.log(`📤 Mensaje enviado de ${id_remitente} → ${id_destinatario}: ${contenido}`);
   return res.status(200).json({ success: true, data: nuevoMensaje });
 });
 
-// Iniciar el servidor
+// ==========================
+// Iniciar servidor
+// ==========================
 const PORT = 3000;
 server.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
