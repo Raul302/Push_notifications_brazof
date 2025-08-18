@@ -115,15 +115,15 @@ io.on('connection', (socket) => {
 
 
   // Servidor
-socket.on("enviar_mensaje", (data, callback) => {
-  console.log("📩 Mensaje recibido:", data);
-  callback({ status: "ok", recibido: true });
-});
+        socket.on("enviar_mensaje", (data, callback) => {
+          console.log("📩 Mensaje recibido:", data);
+          // callback({ status: "ok", recibido: true });
+        });
 
-// Cliente
-socket.emit("enviar_mensaje", { toUserId: "123", mensaje: "Hola" }, (res) => {
-  console.log("📤 Confirmación del server:", res);
-});
+        // Cliente
+        socket.emit("enviar_mensaje", { toUserId: "123", mensaje: "Hola" }, (res) => {
+          console.log("📤 Confirmación del server:", res);
+        });
 
 
   // // Enviar mensaje a un usuario específico
