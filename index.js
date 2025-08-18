@@ -114,14 +114,26 @@ io.on('connection', (socket) => {
   }); 
 
 
-  // Enviar mensaje a un usuario específico
-  socket.on('enviar_mensaje', ({ id_destinatario, message }) => {
-    const targetSocket = onlineUsers.get(id_destinatario);
-    if (targetSocket) {
-      emitNewMessage(id_destinatario,message)
-      console.log(`📤 Mensaje enviado a ${id_destinatario}:`, message);
-    }
-  });
+  // Servidor
+socket.on("enviar_mensaje", (data, callback) => {
+  console.log("📩 Mensaje recibido:", data);
+  callback({ status: "ok", recibido: true });
+});
+
+// Cliente
+socket.emit("enviar_mensaje", { toUserId: "123", mensaje: "Hola" }, (res) => {
+  console.log("📤 Confirmación del server:", res);
+});
+
+
+  // // Enviar mensaje a un usuario específico
+  // socket.on('enviar_mensaje', ({ id_destinatario, message }) => {
+  //   const targetSocket = onlineUsers.get(id_destinatario);
+  //   if (targetSocket) {
+  //     emitNewMessage(id_destinatario,message)
+  //     console.log(`📤 Mensaje enviado a ${id_destinatario}:`, message);
+  //   }
+  // });
 
   socket.on('disconnect', () => {
     for (let [userId, id] of onlineUsers) {
